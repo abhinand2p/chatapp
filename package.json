@@ -10,10 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/abhinand2p/chatapp.git"
   },
-  "keywords": [
-    "chatapp"
-  ],
-  "author": "Abhinand",
+  "author": "",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/abhinand2p/chatapp/issues"
