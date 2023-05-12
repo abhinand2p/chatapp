@@ -1,6 +1,7 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback } from "react";
 import useLocalStorage from "../hooks/useLocalStorage";
 import { useContacts } from "./ContactsProvider";
+import { useSocket } from "./SocketProvider";
 
 const ConversationsContext = React.createContext();
 
@@ -15,6 +16,7 @@ export function ConversationsProvider({ id, children }) {
   );
   const [selectConversationIndex, setSelectedConversationIndex] = useState(0);
   const { contacts } = useContacts();
+  const socket = useSocket()
 
   function createConversation(recipients) {
     setConversations((prevConversations) => {
@@ -22,7 +24,7 @@ export function ConversationsProvider({ id, children }) {
     });
   }
 
-  function addMessageToConversation({ recipients, text, sender }) {
+  const addMessageToConversation= useCallback(({ recipients, text, sender }) => {
     setConversations(prevConversations => {
         let madeChange = false
         const newMessage = {sender, text}
@@ -39,14 +41,23 @@ export function ConversationsProvider({ id, children }) {
             return [...prevConversations, {recipients, messages:[newMessage] }]
         }
     })
-  }
+  },[setConversations])
+
+  useEffect(()=> {
+    if(socket == null) return
+
+    socket.on('receive-message', addMessageToConversation)
+
+    return () => socket.off('receive-message')
+  },[socket, addMessageToConversation])
 
   function sendMessage(recipients, text) {
+    socket.emit('send-message', {recipients, text})
     addMessageToConversation({ recipients, text, sender: id });
   }
 
   const formattedConversations = conversations.map((conversation, index) => {
-    const recipients = conversation.recipients.map((recipient) => {
+    const recipients = conversation.recipients.map(recipient => {
       const contact = contacts.find((contact) => {
         return contact.id === recipient;
       });
@@ -56,7 +67,7 @@ export function ConversationsProvider({ id, children }) {
     });
 
     const messages = conversation.messages.map(message => {
-        const contact = contacts.find((contact) => {
+        const contact = contacts.find(contact => {
             return contact.id === message.sender; 
     })
     const name = (contact && contact.name) || message.sender;
@@ -80,7 +91,7 @@ export function ConversationsProvider({ id, children }) {
       {children}
     </ConversationsContext.Provider>
   )
-},
+})}
 function arrayEquality(a, b){
     if(a.length !==b.length) return false
 
